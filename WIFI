@@ -1,0 +1,80 @@
+import network
+import socket
+import time
+
+# Replace with your network credentials
+SSID = 'Swift  Bradband'
+PASSWORD = 'swift@27042009'
+
+# Connect to the Wi-Fi network
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.connect(SSID, PASSWORD)
+
+# Check for connection status
+connected = False
+
+for _ in range(15):  # Retry for 15 seconds
+    if wlan.isconnected():
+        connected = True
+        break
+    print('Connecting to network...')
+    time.sleep(1)
+
+if connected:
+    print('Network connected!')
+    print('IP Address:', wlan.ifconfig()[0])
+else:
+    print('Failed to connect to network. Ensure the network is 2.4GHz.')
+
+# HTML content to be served
+html = """<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 Web Server</title>
+</head>
+<body>
+    <h1>Hello from ESP32!</h1>
+</body>
+</html>
+"""
+
+# Acknowledgment message for Wi-Fi connection
+if connected:
+    acknowledgment = "Connected to Wi-Fi network: " + SSID + "\nIP Address: " + wlan.ifconfig()[0]
+else:
+    acknowledgment = "Failed to connect to Wi-Fi network: " + SSID + " (Ensure the network is 2.4GHz)"
+
+# Print acknowledgment to the console
+print(acknowledgment)
+
+# Set up the web server
+if connected:
+    addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
+    server_socket = socket.socket()
+    server_socket.bind(addr)
+    server_socket.listen(1)
+
+    print('Listening on', addr)
+
+    while True:
+        if not wlan.isconnected():
+            print("Disconnected from Wi-Fi network")
+            break
+
+        client_socket, client_addr = server_socket.accept()
+        print('Client connected from', client_addr)
+        request = client_socket.recv(1024)
+        print('Request:', request)
+
+        # Send HTTP response
+        client_socket.send('HTTP/1.1 200 OK\r\n')
+        client_socket.send('Content-Type: text/html\r\n')
+        client_socket.send('Connection: close\r\n\r\n')
+        client_socket.sendall(html)
+        client_socket.close()
+else:
+    print('ESP32 will not set up a web server as it is not connected to the Wi-Fi network.')
+
+
+
