@@ -1,0 +1,49 @@
+import network
+import ntptime
+import time
+from machine import Pin
+
+# Wi-Fi credentials
+ssid = "Swift  Bradband"
+password = "swift@27042009"
+
+# Initialize the LED pin
+led = Pin(2, Pin.OUT)
+
+# Connect to Wi-Fi
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.connect(ssid, password)
+
+# Wait for connection and toggle LED
+while not wlan.isconnected():
+    print("Connecting to Wi-Fi...")
+    led.value(0)  # Turn off LED
+    time.sleep(1)
+
+print("Wi-Fi connected.")
+led.value(1)  # Turn on LED
+
+# NTP server and timezone offset (GMT+5:30)
+ntp_server = "pool.ntp.org"  # You can try different NTP servers
+timezone_offset = 5 * 3600 + 30 * 60  # GMT+5:30 in seconds
+
+# Initialize NTP
+try:
+    ntptime.host = ntp_server
+    ntptime.settime()
+except Exception as e:
+    print(f"Failed to synchronize time: {e}")
+    # Manually set the time if NTP fails
+    time.struct_time = time.localtime(0)  # Set a default time or fetch from another source
+
+def print_local_time():
+    # Get the local time
+    t = time.localtime(time.time() + timezone_offset)
+    print("{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}".format(*t))
+
+# Main loop
+while True:
+    print_local_time()
+    time.sleep(10)  # Delay in seconds
+
