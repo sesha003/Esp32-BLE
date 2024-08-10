@@ -1,0 +1,80 @@
+import network
+import time
+from umqtt.simple import MQTTClient
+import ubinascii
+import machine
+
+# Replace with your network credentials
+SSID = 'Swift  Bradband'
+PASSWORD = 'swift@27042009'
+
+# Replace with your MQTT broker details
+MQTT_BROKER = '192.168.1.7'
+CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode()
+TOPIC = b'test/esp32'
+
+# Setup Wi-Fi connection
+def connect_wifi():
+    station = network.WLAN(network.STA_IF)
+    station.active(True)
+    station.connect(SSID, PASSWORD)
+
+    timeout = 30  # Timeout in seconds
+    start_time = time.time()
+
+    while not station.isconnected():
+        if time.time() - start_time > timeout:
+            print('Failed to connect to WiFi within timeout period')
+            return False
+        print('Connecting to WiFi...')
+        time.sleep(1)
+    
+    print('Connection successful')
+    print(station.ifconfig())
+    return True
+
+# Callback function to handle received messages
+def mqtt_callback(topic, msg):
+    print(f'Received message on topic {topic.decode()}: {msg.decode()}')
+
+# Connect to the MQTT broker and subscribe to the topic
+def connect_mqtt():
+    try:
+        client = MQTTClient(CLIENT_ID, MQTT_BROKER)
+        client.set_callback(mqtt_callback)
+        client.connect()
+        print(f'Connected to {MQTT_BROKER} MQTT broker')
+        client.subscribe(TOPIC)
+        return client
+    except Exception as e:
+        print(f'Failed to connect to MQTT broker: {e}')
+        return None
+
+def main():
+    # Initialize the built-in LED pin (GPIO2)
+    led = machine.Pin(2, machine.Pin.OUT)
+    
+    if connect_wifi():
+        # Turn on the LED to indicate successful Wi-Fi connection
+        led.on()
+        time.sleep(1)  # Keep LED on for 1 second to indicate successful connection
+        # Turn off the LED after 1 second
+        led.off()
+
+        client = connect_mqtt()
+        
+        if client:
+            # Blink the LED to indicate active MQTT connection
+            while True:
+                led.on()
+                time.sleep(0.5)  # LED on for 0.5 seconds
+                led.off()
+                time.sleep(0.5)  # LED off for 0.5 seconds
+                client.check_msg()  # Non-blocking check for new messages
+        else:
+            print('MQTT client connection failed.')
+    else:
+        print('WiFi connection failed.')
+
+if __name__ == '__main__':
+    main()
