@@ -1,0 +1,63 @@
+import network
+import time
+from umqtt.simple import MQTTClient
+import ubinascii
+import machine
+
+# Replace with your network credentials
+SSID = 'Swift  Bradband'
+PASSWORD = 'swift@27042009'
+
+# Replace with your MQTT broker details
+MQTT_BROKER = '192.168.1.7'
+CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode()
+TOPIC = b'test/esp32'
+
+# Setup Wi-Fi connection
+def connect_wifi():
+    station = network.WLAN(network.STA_IF)
+    station.active(True)
+    station.connect(SSID, PASSWORD)
+
+    while not station.isconnected():
+        time.sleep(1)
+        print('Connecting to WiFi...')
+    
+    print('Connection successful')
+    print(station.ifconfig())
+
+# Callback function to handle received messages
+def mqtt_callback(topic, msg):
+    print(f'Received message on topic {topic}: {msg}')
+
+# Connect to the MQTT broker and subscribe to the topic
+def connect_mqtt():
+    try:
+        client = MQTTClient(CLIENT_ID, MQTT_BROKER)
+        client.set_callback(mqtt_callback)
+        client.connect()
+        print(f'Connected to {MQTT_BROKER} MQTT broker')
+        client.subscribe(TOPIC)
+        return client
+    except Exception as e:
+        print(f'Failed to connect to MQTT broker: {e}')
+        return None
+
+def main():
+    connect_wifi()
+    client = connect_mqtt()
+    
+    if client:
+        try:
+            while True:
+                client.check_msg()  # Non-blocking check for new messages
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print('Disconnecting...')
+            client.disconnect()
+    else:
+        print('MQTT client connection failed.')
+
+if __name__ == '__main__':
+    main()
+
