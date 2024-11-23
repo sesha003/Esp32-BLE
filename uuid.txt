@@ -1,0 +1,3 @@
+characteristic uuid ----- 87654321-4321-6789-4321-FEDCBA987654
+
+Service uuid --------  12345678-1234-5678-1234-56789ABCDEF0
